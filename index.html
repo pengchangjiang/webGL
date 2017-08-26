@@ -8,10 +8,18 @@
     <title>webGL first</title>
     <link rel="stylesheet" href="css/index.css">
     <script src="js/index.js"></script>
+
 </head>
 
 <body onload="start()">
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" width="500" height="500"></canvas>
 </body>
+<script id="shader-fs" type="x-shader/x-fragment">
+    void main(void){ gl_FragColor = vec4(1.0,1.0,1.0,1.0); }
+</script>
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition; uniform mat4 uMVMatrix; uniform mat4 uPMatrix; void main(void){ gl_Position = uPMatrix *
+    uMVMatrix*vec4(aVertexPosition,1.0); }
+</script>
 
 </html>
