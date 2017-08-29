@@ -22,10 +22,20 @@ function start() {
 
     //创建着色器
     var shaderProgram = initShaders();
+    var programInfo = {
+        program: shaderProgram,
+        attribLocation: {
+            vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition')
+        },
+        uniformLocations: {
+            projectionMatrix: gl.getUniformLocation(shaderProgram, 'uPMatrix'),
+            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uMVMatrix')
+        }
+    }
     //创建对象
     var squareVerticesBuffer = initBuffers();
     //绘制场景
-    drawScene()
+    drawScene(gl, squareVerticesBuffer, programInfo)
 }
 
 
@@ -39,10 +49,15 @@ function initShaders() {
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
 
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-        console.log('创建着色器失败');
+    if (gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        gl.useProgram(shaderProgram);
+        return shaderProgram;
+    } else {
+        var log =
+            gl.getProgramInfoLog(shaderProgram);
+        console.log(log);
     }
-    return shaderProgram;
+
 
 
     // gl.useProgram(shaderProgram);
@@ -85,16 +100,16 @@ function initBuffers() {
     var squareVerticesBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
     var vertices = [
-        1.0, 1.0, 0.0, -1.0, 1.0, 0.0,
-        1.0, -1.0, 0.0, -1.0, -1.0, 0.0
+        1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0
     ]
     gl.bufferData(gl.ARRAY_BUFFER,
         new Float32Array(vertices),
         gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
     return squareVerticesBuffer;
 }
 
-function drawScene() {
+function drawScene(gl, buffers, programInfo) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0); //清空到黑色
     gl.clearDepth(1.0); // Clear everything
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -102,13 +117,51 @@ function drawScene() {
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // perspectiveMatrix = makePerspective(45, 640.0 / 480.0, 0.1, 100.0);
-    // loadIdentity();
-    // mvTranslate([-0.0, 0.0, -6.0]);
-    initBuffers();
-    gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
+    var fieldOfView = 45 * Math.PI / 180;
+    var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    var zNear = 0.1;
+    var zFar = 100.0;
+    var projectionMatrix = mat4.create();
 
-    gl.vertexAttribPointer(vertextPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+    mat4.perspective(projectionMatrix,
+        fieldOfView,
+        aspect,
+        zNear,
+        zFar);
+    var modelViewMatrix = mat4.create();
+    mat4.translate(modelViewMatrix,
+        modelViewMatrix, [-0.0, 0.0, -6.0]
+    );
+
+    var numComponents = 2;
+    var type = gl.FLOAT;
+    var normalize = false;
+    var stride = 0;
+    var offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers);
+
+    gl.vertexAttribPointer(
+        programInfo.attribLocation.vertexPosition,
+        numComponents,
+        type,
+        normalize,
+        stride,
+        offset
+    );
+    gl.enableVertexAttribArray(
+        programInfo.attribLocation.vertexPosition
+    );
+    // gl.useProgram(programInfo.program);
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.projectionMatrix,
+        false,
+        projectionMatrix
+    );
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.modelViewMatrix,
+        false,
+        modelViewMatrix
+    );
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
