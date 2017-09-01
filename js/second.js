@@ -4,13 +4,21 @@ function onload() {
     //2.清空GL
     clearGL(gl);
     //3.构建着色器
-    const fsSource = `void main() {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-    }`;
+    // const fsSource = `void main() {
+    //     gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    // }`;
+    const fsSource = `
+        precision mediump float;
+        varying vec4 vColor;
+        void main() {
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }`;
     const vsSource = `attribute vec3 position;
-        uniform   mat4 mvpMatrix;
-    
+        attribute vec4 color;
+        uniform mat4 mvpMatrix;
+        varying vec4 vColor;
         void main(void){
+            vColor = color;
             gl_Position = mvpMatrix * vec4(position, 1.0);
         }`;
     var fsShader = createShader(gl, 'fs', fsSource);
@@ -19,22 +27,40 @@ function onload() {
     var prg = createProgram(gl, vsShader, fsShader);
     //5.vertex情报组织
     //5.1.attributeLoction的获取
-    var attLocation = gl.getAttribLocation(prg, 'position');
+    // var attLocation = gl.getAttribLocation(prg, 'position');
+    var attLocation = new Array(2);
+    attLocation[0] = gl.getAttribLocation(prg, 'position');
+    attLocation[1] = gl.getAttribLocation(prg, 'color');
     //5.2.attribute 元素数数量(这次使用xyz,所以取3)
-    var attStride = 3;
+    // var attStride = 3;
+    var attStride = new Array(2);
+    attStride[0] = 3;
+    attStride[1] = 4;
     //5.3.模型(顶点)数据
     var vertexPosition = [
         0.0, 0.0, 0.0,
-        1.0, 1.0, 0.0, 1.0, 0.0, 0.0
+        1.0, 1.0, 0.0,
+        1.0, 0.0, 0.0
+    ];
+    var vertexColor = [
+        1.0, 0.0, 0.0, 1.0,
+        0.0, 1.0, 0.0, 1.0,
+        0.0, 0.0, 1.0, 1.0
     ];
     //6.生成 VBO(vertex buffer object)
-    var vbo = createVBO(gl, vertexPosition);
-    //7.绑定VBO
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    // var vbo = createVBO(gl, vertexPosition);
+    var positionVBO = createVBO(gl, vertexPosition);
+    var colorVBO = createVBO(gl, vertexColor);
+    //7.绑定VBO(位置)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionVBO);
     //8.设定attribute属性有效
-    gl.enableVertexAttribArray(attLocation);
+    gl.enableVertexAttribArray(attLocation[0]);
     //9.添加attribute属性
-    gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(attLocation[0], attStride[0], gl.FLOAT, false, 0, 0);
+    //7.2 绑定VBO(颜色)
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorVBO);
+    gl.enableVertexAttribArray(attLocation[1]);
+    gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
     //10.矩阵相关处理
     //10.1 matIV对象生成
     var m = new matIV();
