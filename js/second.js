@@ -2,7 +2,7 @@ function onload() {
     //1.初始化GL
     var gl = initGL('canvas');
     //2.清空GL
-    clearGL(gl);
+    // clearGL(gl);
     //3.构建着色器
     // const fsSource = `void main() {
     //     gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -11,9 +11,10 @@ function onload() {
         precision mediump float;
         varying vec4 vColor;
         void main() {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            gl_FragColor = vColor;
         }`;
-    const vsSource = `attribute vec3 position;
+    const vsSource = `
+        attribute vec3 position;
         attribute vec4 color;
         uniform mat4 mvpMatrix;
         varying vec4 vColor;
@@ -51,16 +52,7 @@ function onload() {
     // var vbo = createVBO(gl, vertexPosition);
     var positionVBO = createVBO(gl, vertexPosition);
     var colorVBO = createVBO(gl, vertexColor);
-    //7.绑定VBO(位置)
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionVBO);
-    //8.设定attribute属性有效
-    gl.enableVertexAttribArray(attLocation[0]);
-    //9.添加attribute属性
-    gl.vertexAttribPointer(attLocation[0], attStride[0], gl.FLOAT, false, 0, 0);
-    //7.2 绑定VBO(颜色)
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorVBO);
-    gl.enableVertexAttribArray(attLocation[1]);
-    gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
+    setAttribut(gl, [positionVBO, colorVBO], attLocation, attStride);
     //10.矩阵相关处理
     //10.1 matIV对象生成
     var m = new matIV();
@@ -68,22 +60,79 @@ function onload() {
     var mMatrix = m.identity(m.create());
     var vMatrix = m.identity(m.create());
     var pMatrix = m.identity(m.create());
+    var vpMatrix = m.identity(m.create());
     var mvpMatrix = m.identity(m.create());
     //10.3 视图变换坐标矩阵
     m.lookAt([0.0, 0.0, 3.0], [0, 0, 0], [0, 1, 0], vMatrix);
     //10.4 投影坐标变换矩阵
     m.perspective(90, gl.canvas.width / gl.canvas.height, 0.1, 100, pMatrix);
     //10.5 各矩阵向乘，得到最终矩阵
-    m.multiply(pMatrix, vMatrix, mvpMatrix);
-    m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+    // m.multiply(pMatrix, vMatrix, mvpMatrix);
+    // m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+    //将试图矩阵和投影矩阵乘好保存起来
+    m.multiply(pMatrix, vMatrix, vpMatrix);
+
+    //移动第一个模型的模型坐标变换矩阵
+    // m.translate(mMatrix, [1.5, 0.0, 0.0], mMatrix);
+    //第一个模型 模型矩阵*视图矩阵*投影矩阵
+    // m.multiply(vpMatrix, mMatrix, mvpMatrix);
+    //将坐标变换矩阵传入uniformLocation，并绘制
     //11. 11.1 uniformLocation的获取
     var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
     //11.2 向uniformLocation中传入变换矩阵
-    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+    // gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
     //12 绘制模型
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    //第二个模型
+    // m.identity(mMatrix);
+    // m.translate(mMatrix, [-1.5, 0.0, 0.0], mMatrix);
+    // m.multiply(vpMatrix, mMatrix, mvpMatrix);
+    // gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+    // gl.drawArrays(gl.TRIANGLES, 0, 3);
     //13 context刷新
-    gl.flush();
+
+    var count = 0;
+    (function () {
+        clearGL(gl);
+        count++;
+        var rad = (count % 360) * Math.PI / 180;
+
+
+        //模型1按照一个圆的轨道旋转
+        var x = Math.cos(rad);
+        var y = Math.sin(rad);
+        m.identity(mMatrix);
+        m.translate(mMatrix, [x, y + 1.0, 0.0], mMatrix);
+        //完成模型1坐标变换，并绘制
+        m.multiply(vpMatrix, mMatrix, mvpMatrix);
+        gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+
+
+        //模型2沿Y轴进行旋转
+        m.identity(mMatrix);
+        m.translate(mMatrix, [1.0, -1.0, 0.0], mMatrix);
+        m.rotate(mMatrix, rad, [0, 1, 0], mMatrix);
+        //模型2坐标变换，绘制
+        m.multiply(vpMatrix, mMatrix, mvpMatrix);
+        gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+
+        //模型3进行放大缩小
+        var s = Math.sin(rad) + 1.0;
+        m.identity(mMatrix);
+        m.translate(mMatrix, [-1.0, -2.0, 0.0], mMatrix);
+        m.scale(mMatrix, [s, s, 0.0], mMatrix);
+        //模型3的变换，绘制
+        m.multiply(vpMatrix, mMatrix, mvpMatrix);
+        gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.flush();
+        setTimeout(arguments.callee, 1000 / 30);
+    })();
 }
 //初始化gl
 function initGL(id) {
@@ -148,4 +197,15 @@ function createVBO(gl, data) {
     //将绑定的缓存设为无效
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     return vbo;
+}
+//设置VBO属性
+function setAttribut(gl, vbos, attL, attS) {
+    vbos.forEach(function (vbo, i) {
+        //7.绑定VBO(位置)
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        //8.设定attribute属性有效
+        gl.enableVertexAttribArray(attL[i]);
+        //9.添加attribute属性
+        gl.vertexAttribPointer(attL[i], attS[i], gl.FLOAT, false, 0, 0);
+    }, this);
 }
