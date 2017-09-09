@@ -9,30 +9,29 @@ function onload() {
     //http://www.gltech.win/%E5%AD%A6%E4%B9%A0webgl/2017/07/10/%E7%BB%98%E5%88%B6%E7%82%B9%E7%BA%BF%E9%9D%A2.html
     var selectNode = document.getElementById('drawModeSelect');
     var mode = null;
-    var count = 0;
+
+
     selectNode.onchange = function (e) {
+        var vertexPosition = [
+            0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0,
+            1.0, 1.0, 0.0,
+            1.0, 0.0, 0.0
+        ];
+        var vertexColor = [
+            1.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+            0.0, 1.0, 0.0, 1.0,
+            0.0, 0.0, 1.0, 1.0
+        ];
+        var count = 4;
         var modetxt = e.target.value;
         switch (modetxt) {
             case 'points':
-                var vertexPosition = [
-                    0.0, 1.0, 0.0,
-                    0.0, 0.0, 0.0,
-                    1.0, 1.0, 0.0,
-                    1.0, 0.0, 0.0
-                ];
-                var vertexColor = [
-                    1.0, 1.0, 1.0, 1.0,
-                    1.0, 0.0, 0.0, 1.0,
-                    0.0, 1.0, 0.0, 1.0,
-                    0.0, 0.0, 1.0, 1.0
-                ];
                 mode = gl.POINTS;
-                vertexBuild(gl, prg, vertexPosition, vertexColor);
-                count = 4;
                 break;
             case 'lineStrip':
                 mode = gl.LINE_STRIP;
-
                 break;
             case 'lineLoop':
                 mode = gl.LINE_LOOP;
@@ -42,9 +41,34 @@ function onload() {
                 break;
             case 'triangleStrip':
                 mode = gl.TRIANGLE_STRIP;
+                vertexPosition = [
+                    0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    1.0, 1.0, 0.0,
+                    2.0, 0.0, 0.0
+                ];
                 break;
             case 'triangleFan':
                 mode = gl.TRIANGLE_FAN;
+                vertexPosition = [
+                    0.0, 0.0, 0.0
+                ];
+                vertexColor = [
+                    1.0, 1.0, 0.0, 1.0
+                ];
+                count = 1;
+                for (var angle = 0; angle < 361; angle++) {
+                    var a = angle / 180 * Math.PI;
+                    var x = Math.cos(a);
+                    var y = Math.sin(a);
+                    var z = 0;
+
+                    vertexPosition.push(x);
+                    vertexPosition.push(y);
+                    vertexPosition.push(z);
+                    vertexColor = vertexColor.concat([1.0, 1.0, 0.0, 1.0]);
+                    count++;
+                }
                 break;
             case 'triangles':
                 mode = gl.TRIANGLES;
@@ -54,6 +78,7 @@ function onload() {
                 break;
         }
         if (modetxt != 'null') {
+            vertexBuild(gl, prg, vertexPosition, vertexColor);
             matrixBuild(gl, prg);
             clearGL(gl);
             gl.drawArrays(mode, 0, count);
@@ -61,6 +86,7 @@ function onload() {
 
     }
 }
+
 function init(gl) {
     //着色器 vec4(1.0,0.0,0.0,0.5)
     const fsSource = `

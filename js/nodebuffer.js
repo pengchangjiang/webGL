@@ -1,0 +1,1 @@
+var a = new Buffer('a68c163d', 'hex'); //0.0367552
